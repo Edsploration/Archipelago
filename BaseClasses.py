@@ -962,8 +962,21 @@ class Location:
         return ((self.always_allow(state, item) and item.name not in state.multiworld.non_local_items[item.player])
                 or ((self.progress_type != LocationProgressType.EXCLUDED or not (item.advancement or item.useful))
                     and self.item_rule(item)
-                    and (not check_access or self.can_reach(state))))
+                    and (not check_access or self.can_reach(state))
+                    and self.is_not_skulltula_house_token_reward(item)))
 
+    def is_not_skulltula_house_token_reward(self, item: Item) -> bool:
+        if item.name != 'Gold Skulltula Token':
+            return True
+        skulltula_rewards = [
+            "Kak 10 Gold Skulltula Reward",
+            "Kak 20 Gold Skulltula Reward",
+            "Kak 30 Gold Skulltula Reward",
+            "Kak 40 Gold Skulltula Reward",
+            "Kak 50 Gold Skulltula Reward",
+        ]
+        return self.name not in skulltula_rewards
+        
     def can_reach(self, state: CollectionState) -> bool:
         # self.access_rule computes faster on average, so placing it first for faster abort
         assert self.parent_region, "Can't reach location without region"
