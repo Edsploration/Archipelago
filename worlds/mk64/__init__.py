@@ -8,7 +8,7 @@ from worlds.AutoWorld import World, WebWorld
 from . import Items, Locations, Regions, Rom, Rules
 from .Client import MarioKart64Client  # Import to register client with BizHawkClient
 from .Locations import MK64Location
-from .Options import MK64Options, GameMode, Goal, CupTrophyLocations, Opt, ShuffleDriftAbilities
+from .Options import MK64Options, GameMode, Goal, CupTrophyLocations, Opt, ShuffleDriftAbilities, CourseOrder
 
 
 class MK64Web(WebWorld):
@@ -64,6 +64,7 @@ class MK64World(World):
     event_names: list[str]
     course_order: list[int]
     starting_karts: list[str] = []
+    using_ut: bool = False
 
     @classmethod
     def stage_assert_generate(cls, multiworld: MultiWorld):
@@ -72,10 +73,20 @@ class MK64World(World):
             raise FileNotFoundError(rom_file)
 
     def generate_early(self) -> None:
+        # Universal tracker stuff, shouldn't do anything in standard gen
+        if hasattr(self.multiworld, "re_gen_passthrough"):
+            if "Mario Kart 64" in self.multiworld.re_gen_passthrough:
+                self.using_ut = True
+                passthrough = self.multiworld.re_gen_passthrough["Mario Kart 64"]
+                self.options.course_order.value = CourseOrder.option_shuffle
+                self.options.shuffle_item_box_clusters.value = 72
+                self.course_order = passthrough["course_order"]
+                self.starting_karts = passthrough["starting_karts"]
+
         self.opt = opt = Opt(self)
 
         # Count items without a paired location and vice versa, based on player options
-        # hardcoded for speed, and because duplicating the the world generation logic here would be excessive.
+        # hardcoded for speed, and because duplicating the world generation logic here would be excessive.
         # Tests may be needed to keep this from being fragile, or it may need to be refactored to later into generation.
         num_unpaired_items = ((not opt.feather and not opt.two_player and 21)  # 21 to 177
                               + (opt.feather and not opt.two_player and 22)
@@ -105,6 +116,13 @@ class MK64World(World):
         self.num_filler_items = opt.min_filler + num_needed_extra_items               # 0 to 83
         self.shuffle_clusters = ([True] * opt.clusters + [False] * (72 - opt.clusters))
         self.filler_spots = ([True] * num_needed_extra_locs + [False] * (338 - num_needed_extra_locs - opt.clusters))
+        # if using UT, we can just max out the locations
+        if self.using_ut:
+            for i, _ in enumerate(self.shuffle_clusters):
+                self.shuffle_clusters[i] = True
+            for i, _ in enumerate(self.filler_spots):
+                self.filler_spots[i] = True
+
         # Uncomment to print at generation time extra locations/items
         # print(f"num_unpaired_items: {num_unpaired_items}")
         # print(f"num_unpaired_locations: {num_unpaired_locations}")
@@ -165,7 +183,16 @@ class MK64World(World):
             "shuffle_special_item_boxes",
             "low_engine_class",
             "middle_engine_class",
-            "high_engine_class"
+            "high_engine_class",
         )
         slot_data["course_order"] = self.course_order
+        slot_data["starting_karts"] = self.starting_karts
+        return slot_data
+
+    # for the universal tracker, doesn't get called in standard gen
+    # docs: https://github.com/FarisTheAncient/Archipelago/blob/tracker/worlds/tracker/docs/re-gen-passthrough.md
+    @staticmethod
+    def interpret_slot_data(slot_data: typing.Dict[str, typing.Any]) -> typing.Dict[str, typing.Any]:
+        # returning slot_data so it regens, giving it back in multiworld.re_gen_passthrough
+        # we are using re_gen_passthrough over modifying the world here due to complexities with ER
         return slot_data

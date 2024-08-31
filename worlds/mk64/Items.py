@@ -45,7 +45,7 @@ def create_items(world: "MK64World"):
     opt = world.opt
     num_filler = world.num_filler_items
     itempool = world.multiworld.itempool
-    random = world.multiworld.random
+    random = world.random
 
     item_group_mask = (Group.base
                        | (opt.feather and Group.feather)
@@ -89,10 +89,17 @@ def create_items(world: "MK64World"):
             filler_items.append(name)
         elif group == Group.trap:
             trap_items.append(name)
-    for _ in range(1 + opt.two_player):
-        kart_index = random.randrange(len(karts))
-        world.multiworld.push_precollected(create_item(karts[kart_index], player, ItemClassification.progression))
-        world.starting_karts.append(karts.pop(kart_index))
+
+    # if using Universal Tracker, read from the starting karts we got from slot data
+    if world.using_ut:
+        for kart in world.starting_karts:
+            world.multiworld.push_precollected(create_item(kart, player, ItemClassification.progression))
+            karts.remove(kart)
+    else:
+        for _ in range(1 + opt.two_player):
+            kart_index = random.randrange(len(karts))
+            world.multiworld.push_precollected(create_item(karts[kart_index], player, ItemClassification.progression))
+            world.starting_karts.append(karts.pop(kart_index))
     for kart in karts:
         itempool.append(create_item(kart, player))
     for _ in range(round(num_filler * (100 - opt.trap_percentage) * 0.01)):

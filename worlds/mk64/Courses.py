@@ -29,7 +29,11 @@ hard_course_pool = medium_course_pool + [KTB, RoR, BC]
 
 
 def determine_order(world: "MK64World") -> list[int]:
-    random = world.multiworld.random
+    # if using Universal Tracker, we've already filled in the course order
+    if world.using_ut:
+        return world.course_order
+
+    random = world.random
     opt = world.opt
 
     match opt.course_order:

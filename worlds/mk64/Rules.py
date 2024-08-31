@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 from BaseClasses import CollectionState
-from ..generic.Rules import add_rule, set_rule
+from worlds.generic.Rules import add_rule, set_rule
 
 from .Locations import course_locations, Group, shared_hazard_locations, cup_locations, cup_events
 from .Options import Opt, GameMode, Goal, CupTrophyLocations
